@@ -21,6 +21,12 @@ python3 -m gpcc --lang nl
 
 # download into a specified directory
 python3 -m gpcc --output ./gpc-dump/
+
+# download files in XML format
+python3 -m gpcc --format xml
+
+# download files in XLSX format
+python3 -m gpcc --format xlsx
 ```
 
 ## Python usage
@@ -33,7 +39,15 @@ from pathlib import Path
 async def run():
     langs = await gpcc.get_languages()
     output = Path('gpc-dump')
+    
+    # Default format is JSON
     await gpcc.fetch_files(output, langs)
+    
+    # Download files in XML format
+    # await gpcc.fetch_files(output, langs, format='xml')
+    
+    # Download files in XLSX format
+    # await gpcc.fetch_files(output, langs, format='xlsx')
 
 asyncio.run(run())
 ```

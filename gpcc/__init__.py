@@ -6,7 +6,7 @@ from ._crawlers import (
 from ._schemas import Categories, Category, Language, Publication
 
 
-__version__ = '1.0.0'
+__version__ = '1.0.1'
 __all__ = [
     'Categories',
     'Category',
