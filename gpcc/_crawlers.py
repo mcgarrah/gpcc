@@ -103,7 +103,7 @@ async def fetch_file(
 
 
 async def parse_json_file(stream: BinaryIO) -> Categories:
-    """Given a steeam with a JSON file, parse it into Categories object.
+    """Given a stream with a JSON file, parse it into Categories object.
 
     The JSON file can be fetched using `fetch_file`.
     """
@@ -128,17 +128,19 @@ def _parse_categories(raw_cats: list[dict]) -> list[Category]:
 async def fetch_files(
     dir_path: Path,
     languages: list[Language],
+    format: Literal['json', 'xml', 'xlsx'] = 'json',
     stdout: TextIO = sys.stdout,
 ) -> None:
-    """Download the latest publication JSON file for every given language.
+    """Download the latest publication file for every given language.
 
     The results will be saved in the given directory.
+    Format can be 'json', 'xml', or 'xlsx'.
     """
     sem = asyncio.Semaphore(25)
     tasks = []
     dir_path.mkdir(exist_ok=True, parents=True)
     for lang in languages:
-        tasks.append(_download(sem, dir_path, lang, stdout))
+        tasks.append(_download(sem, dir_path, lang, stdout, format))
     await asyncio.gather(*tasks)
 
 
@@ -147,17 +149,19 @@ async def _download(
     dir_path: Path,
     lang: Language,
     stdout: TextIO,
+    format: Literal['json', 'xml', 'xlsx'] = 'json',
 ) -> None:
     async with sem:
         publications = await get_publications(lang)
         publication = publications[0]
-        path = dir_path / f'{lang.languageCode.lower()}-{publication.version}.json'
+        extension = format.lower()
+        path = dir_path / f'{lang.languageCode.lower()}-{publication.version}.{extension}'
         with path.open('wb') as stream:
             print('⏳️ started: ', path.stem, file=stdout)
             try:
                 for _ in range(40):
                     try:
-                        await _fetch_with_retries(path, stdout, stream, publication)
+                        await _fetch_with_retries(path, stdout, stream, publication, format)
                     except aiohttp.ClientResponseError:
                         continue
                     else:
@@ -169,10 +173,10 @@ async def _download(
                 print('✅ finished:', path.stem, file=stdout)
 
 
-async def _fetch_with_retries(path: Path, stdout: TextIO, *args) -> None:
+async def _fetch_with_retries(path: Path, stdout: TextIO, stream: BinaryIO, publication: Publication, format: Literal['json', 'xml', 'xlsx'] = 'json') -> None:
     for _ in range(40):
         try:
-            await fetch_file(*args)
+            await fetch_file(stream, publication, format)
         except aiohttp.ClientResponseError as exc:
             # if "too many attempts", sleep and try again
             if exc.status == 429:
